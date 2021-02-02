@@ -48,14 +48,14 @@ sfapmui:
     # targetMemoryUtilizationPercentage: 80
   image:
     repository: snappyflowml/sfapm-ui
-    tag: 3.1.1
+    tag: stable
     pullPolicy: IfNotPresent
   resources: 
     limits:
       cpu: 500m
-      memory: 500Mi
+      memory: 250Mi
     requests:
-      cpu: 100m
+      cpu: 250m
       memory: 128Mi
   service:
     type: NodePort # this is the entrypoint change to Loadbalancer
@@ -79,7 +79,7 @@ sfapm:
     # targetMemoryUtilizationPercentage: 80
   image:
     repository: snappyflowml/sfapm-server
-    tag: 3.1.1
+    tag: stable
     pullPolicy: IfNotPresent
   resources: 
     limits:
@@ -112,8 +112,8 @@ sfapm_celery:
     replicaCount: 2
     command: "celery worker -n notify@%n -A snappyflow -l $LOG_LEVEL -Q notify -c10 $CELERY_OPTS"
   periodic:
-    replicaCount: 2
-    command: "celery worker -n periodic@%n -A snappyflow -l $LOG_LEVEL -Q periodic -c10 $CELERY_OPTS"
+    replicaCount: 4
+    command: "celery worker -n periodic@%n -A snappyflow -l $LOG_LEVEL -Q periodic -c5 $CELERY_OPTS"
   sftrace:
     replicaCount: 1
     command: "celery worker -n sftrace@%n -A snappyflow -l $LOG_LEVEL -Q sftrace -c10 $CELERY_OPTS"
@@ -132,7 +132,7 @@ vizbuilder:
     # targetMemoryUtilizationPercentage: 80
   image:
     repository: snappyflowml/sfapm-vizbuilder
-    tag: 3.1.1
+    tag: stable
     pullPolicy: IfNotPresent
   resources: 
     limits:

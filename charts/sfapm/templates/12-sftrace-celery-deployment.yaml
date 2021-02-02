@@ -1,24 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "sfapm.fullname" . }}-apm-celery-default
+  name: {{ include "sfapm.fullname" . }}-apm-celery-sftrace
   labels:
     {{- include "sfapm.labels" . | nindent 4 }}
     app: sfapm
     role: celery
-    queue: default
+    queue: sftrace
     snappyflow/component: snappyflow-apm
     {{ default "snappyflow/appname" .Values.global.sfappname_key }}: {{ default .Release.Name .Values.global.sfappname }}
     {{ default "snappyflow/projectname" .Values.global.sfprojectname_key }}: {{ default .Release.Name .Values.global.sfprojectname }}
 spec:
-  replicas: {{ .Values.sfapm_celery.default.replicaCount }}
-  minReadySeconds: 10
+  replicas: {{ .Values.sfapm_celery.sftrace.replicaCount }}
   selector:
     matchLabels:
       {{- include "sfapm.selectorLabels" . | nindent 6 }}
       app: sfapm
       role: celery
-      queue: default
+      queue: sftrace
   template:
     metadata:
     {{- with .Values.podAnnotations }}
@@ -29,7 +28,7 @@ spec:
         {{- include "sfapm.selectorLabels" . | nindent 8 }}
         app: sfapm
         role: celery
-        queue: default
+        queue: sftrace
         snappyflow/component: snappyflow-apm
         {{ default "snappyflow/appname" .Values.global.sfappname_key }}: {{ default .Release.Name .Values.global.sfappname }}
         {{ default "snappyflow/projectname" .Values.global.sfprojectname_key }}: {{ default .Release.Name .Values.global.sfprojectname }}
@@ -90,12 +89,12 @@ spec:
           imagePullPolicy: {{ .Values.sfapm.image.pullPolicy }}
           {{- if .Values.global.enable_sftrace }}
           command:
-          - sh
-          - -c
-          - /sfagent/sftrace/sftrace --sfcmd="{{ .Values.sfapm_celery.default.command }}"
+            - sh
+            - -c
+            - /sfagent/sftrace/sftrace --sfcmd="{{ .Values.sfapm_celery.sftrace.command }}"
           {{- else }}
           command: ["bash", "-c"]
-          args: [{{ .Values.sfapm_celery.default.command }}]
+          args: [{{ .Values.sfapm_celery.sftrace.command }}]
           {{- end }}
           env:
           {{- range $key, $value := .Values.sfapm_celery.env }}
@@ -112,7 +111,7 @@ spec:
             - name: ENABLE_SFTRACE
               value: "{{ .Values.global.enable_sftrace }}"
             - name: ELASTIC_APM_SERVICE_NAME
-              value: "sfapm-celery-default"
+              value: "sfapm-celery-sftrace"
           {{- end }}
           {{- if .Values.postgresql.enabled }}
             - name: DB_PASSWORD
@@ -138,11 +137,19 @@ spec:
           resources:
             {{- toYaml .Values.sfapm_celery.resources | nindent 12 }}
           livenessProbe:
-            initialDelaySeconds: 300
-            periodSeconds: 180
+            initialDelaySeconds: 30
+            periodSeconds: 60
             timeoutSeconds: 10
             exec:
-              command: ["python", "check.py"]
+              command: ["bash", "-c", "-x", "-e", 
+              "celery -b redis://$REDIS_HOST:$REDIS_PORT/0 -d sftrace@$HOSTNAME inspect ping"]
+          readinessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            exec:
+              command: ["bash", "-c", "-x", "-e", 
+              "celery -b redis://$REDIS_HOST:$REDIS_PORT/0 -d sftrace@$HOSTNAME inspect ping"]
           volumeMounts:
             - mountPath: /data/snappyflow
               name: data
@@ -169,3 +176,4 @@ spec:
         - name: sftrace-agent
           emptyDir: {}
         {{- end }}
+

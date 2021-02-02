@@ -30,7 +30,6 @@ config:
   # Cluster documents to collect
   node_static: true
   node_compute: true
-  node_network: false   # Metrics for node network interfaces
   node_volume: true
   pod_static: true
   pod_compute: true
@@ -43,6 +42,11 @@ config:
   service_static: true
   node-storage: true
   storage-stats: true
+  node_network: true   # Metrics for node network interfaces
+
+  # Applicable if node_network is true, enable/disable metrics for physical and virtual interfaces
+  node_network_physical_interface: true   # Metrics for node network physical interfaces
+  node_network_virtual_interface: false   # Metrics for node network virtual interfaces
   
   
 
@@ -87,6 +91,7 @@ node_agent:
     configmap:
       log_dir: /tmp
       interval: 30
+      system_interval: 60
     plugin_interval:
       elasticsearch:
         cluster: 300
@@ -138,6 +143,30 @@ node_agent:
 
 
   nodeSelector: {}
+
+forwardmetric:
+    # forward metric
+    name: sfagentmetric
+    enabled: false
+    image:
+      repository: snappyflowml/sfkube-forward-metric
+      tag: latest
+      pullPolicy: Always
+    service:
+      type: ClusterIP
+      port: 8000
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 500Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 80
 
 # cluster level plugin Pod
 #   Container with cloud heartbeat + cluster document
